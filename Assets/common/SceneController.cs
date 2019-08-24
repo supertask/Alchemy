@@ -5,33 +5,26 @@ using UnityEngine.SceneManagement;
 
 public class SceneController : MonoBehaviour
 {
-    public string sceneName1;
-    public string sceneName2;
-    public string sceneName3;
-    public string sceneName4;
-    public string sceneName5;
+    public List<string> sceneNames;
+    private KeyCode[] keys;
+
+    private void Start()
+    {
+        this.keys = new KeyCode[] {
+            KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5,
+            KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0
+        };
+    }
 
     void Update()
     {
-        if (Input.GetKeyUp(KeyCode.Alpha1))
+        if (this.sceneNames.Count > this.keys.Length) { return;  }
+
+        for (int i = 0; i < this.sceneNames.Count; i++)
         {
-            this.ChangeScene(sceneName1);
-        }
-        else if (Input.GetKeyUp(KeyCode.Alpha2))
-        {
-            this.ChangeScene(sceneName2);
-        }
-        else if (Input.GetKeyUp(KeyCode.Alpha3))
-        {
-            this.ChangeScene(sceneName3);
-        }
-        else if (Input.GetKeyUp(KeyCode.Alpha4))
-        {
-            this.ChangeScene(sceneName4);
-        }
-        else if (Input.GetKeyUp(KeyCode.Alpha5))
-        {
-            this.ChangeScene(sceneName5);
+            if (Input.GetKeyUp(this.keys[i])) {
+                this.ChangeScene(this.sceneNames[i]);
+            }
         }
     }
 

@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/common/SimpleMapping/FingerMapper.unity
+    path: Assets/common/RoomMapping/FingerMapper.unity
     guid: ec9a9c4c17dcd834b83174d633d62de8
   - enabled: 1
     path: Assets/Alchemy/Alchemy.unity
