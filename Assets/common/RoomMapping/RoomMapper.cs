@@ -2,8 +2,38 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System;
 using System.IO;
 using Dummiesman;
+using Leap.Unity;
+
+[System.Serializable]
+public class MappedObjectsPack
+{
+    public List<string> objNames;
+    public List<Vector3> objPositions;
+    public List<Quaternion> objRotations;
+    public List<Vector3> objScales;
+    
+    public MappedObjectsPack() {
+        this.objNames = new List<string>();
+        this.objPositions = new List<Vector3>();
+        this.objRotations = new List<Quaternion>();
+        this.objScales = new List<Vector3>();
+    }
+
+    public static MappedObjectsPack CreateFromJSON(string json) {
+        MappedObjectsPack pack = null;
+        try {
+            pack = JsonUtility.FromJson<MappedObjectsPack>(json);
+        }
+        catch (Exception e) {
+            Debug.Log("JsonUtilityオブジェクトへの変換エラー" + e.Message);
+        }
+        return pack;
+    }
+    public string ToJSON() { return JsonUtility.ToJson(this); }
+}
 
 public class RoomMapper : MonoBehaviour
 {
@@ -12,37 +42,32 @@ public class RoomMapper : MonoBehaviour
     public Transform player;
     public Material cubeMat;
     public Material objMat;
+    public string mappedJsonName = "pack.json";
 
     public static readonly string SCENE_NAME = "RoomMapper";
-    private string scannedObjPath;
-    private int objIndex;
-    private int boxIndex;
+    //public string SCANNED_OBJ_PATH ;
+    public string MAPPED_OBJECTS_PACK_PATH;
+
+    public static readonly string CUBE_PREFIX = "Cube";
+
     private int selectingIndex;
-    private static string SCANNED_OBJ_PREFIX = "ScannedObj";
-    private static string CUBE_PREFIX = "Cube";
+    private MappedObjectsPack pack;
 
     void Start()
     {
-        this.scannedObjPath = Application.streamingAssetsPath + "/ScannedObjs/";
-        this.objIndex = 0;
-        this.boxIndex = 0;
+        //this.SCANNED_OBJ_PATH = Application.dataPath + "/Resources/ScannedObjects/";
+        this.MAPPED_OBJECTS_PACK_PATH = Application.dataPath + "/Resources/MappedObjectsPack/";
         this.selectingIndex = 0;
         this.Load();
+
+        //マップのオブジェクトを選択中に紐づけ
+        this.SwitchSelectingObj();
     }
 
     void Update()
     {
         if (SceneManager.GetActiveScene().name == RoomMapper.SCENE_NAME)  {
-            if (Input.GetKeyUp(KeyCode.O)) {
-
-                Debug.Log("Key O");
-                this.CreateScannedObject(); //マップするボックス作成
-            }
-            else if (Input.GetKeyUp(KeyCode.B)) {
-                Debug.Log("Key B");
-                this.CreateCube(); //マップするボックス作成
-            }
-            else if (Input.GetKeyUp(KeyCode.M)) {
+            if (Input.GetKeyUp(KeyCode.M)) {
                 Debug.Log("Key M");
                 this.SwitchSelectingObj();
             }
@@ -55,77 +80,59 @@ public class RoomMapper : MonoBehaviour
 
     /*
      * Cubeを作成
-     */
     public void CreateCube()
     {
         this.MapSelectingObjects(); //選択したオブジェクトをマッピングする
-        GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        box.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-        box.transform.position = player.position +  player.rotation * Vector3.forward * 0.3f; //0.3m先
-        box.GetComponent<Renderer>().enabled = true;
-        box.transform.parent = this.selecting.transform;
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.name = RoomMapper.SCANNED_OBJ_PREFIX + this.cubeIndex;
+        cube.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+        cube.transform.position = player.position +  player.rotation * Vector3.forward * 0.3f; //0.3m先
+        cube.transform.parent = this.selecting.transform;
+        cube.GetComponent<MeshRenderer>().material = this.cubeMat;
+        this.cubeIndex++;
     }
+     */
 
     /*
      * スキャンしたオブジェクトを作成し，選択中オブジェクトに加える
-     */
-    public void CreateScannedObject()
+    public void CreateScannedObject(
+        Transform parent,
+        string filename,
+        Vector3 position,
+        Quaternion rotation,
+        Vector3 scale)
     {
-        DirectoryInfo streamingAssets = new DirectoryInfo(this.scannedObjPath);
-        FileInfo[] infos = streamingAssets.GetFiles("*.obj");
-        if (this.objIndex < infos.Length) {
-            FileInfo info = infos[this.objIndex];
-            Debug.Log(info.FullName);
-
-            this.MapSelectingObjects();
-            GameObject newObj = new OBJLoader().Load(info.FullName);
-            newObj.name = RoomMapper.SCANNED_OBJ_PREFIX + this.objIndex;
-            newObj.transform.position = player.position + player.rotation * Vector3.forward * 1.5f; //1.5m先
-            newObj.transform.parent = this.selecting.transform;
-            this.objIndex++;
+        //this.MapSelectingObjects();
+        string objPath = RoomMapper.SCANNED_OBJ_PATH + filename;
+        if (File.Exists(objPath)) {
+            Debug.Log("ERROR: no file, " + objPath);
+            return;
         }
-        else {
-            Debug.Log("ERROR: No more obj files.");
+
+        GameObject newObj = new OBJLoader().Load(objPath);
+        newObj.transform.position = position;
+        newObj.transform.rotation = rotation;
+        newObj.transform.localScale = scale;
+        newObj.transform.parent = parent;
+
+        //マテリアル対応付け
+        foreach (Transform child in newObj.GetComponentsInChildren<Transform>())
+        {
+            MeshRenderer renderer = child.GetComponent<MeshRenderer>();
+            if (renderer != null) {
+                child.gameObject.AddComponent<UVGenerator>();
+                renderer.material = this.objMat;
+            }
         }
     }
-
-    /*
-     * セーブデータを読み込む
      */
-    public void Load()
-    {
-        /*
-        bool is_shown_map = (SceneManager.GetActiveScene().name == RoomMapper.SCENE_NAME);
 
-        if (PlayerPrefs.HasKey("roomMappedObjectTypeList"))
-        {
-            if (this.mapped.transform.childCount > 0)
-            {
-                foreach (Transform child in this.mapped.transform) { GameObject.Destroy(child.gameObject); }
-            }
-            string[] objTypeList = PlayerPrefsX.GetStringArray("roomMappedObjectTypeList");
-            Vector3[] posList = PlayerPrefsX.GetVector3Array("roomMappedPosList");
-            Quaternion[] rotList = PlayerPrefsX.GetQuaternionArray("roomMappedRotList");
-            Vector3[] scaleList = PlayerPrefsX.GetVector3Array("roomMappedScaleList");
-            for (int i = 0; i < posList.Length; i++)
-            {
-                if (objTypeList[i].IndexOf(RoomMapper.SCANNED_OBJ_PREFIX) >= 0) {
-                    GameObject obj = Object.Instantiate(this.) as GameObject;
-                }
-                else if (objTypeList[i].IndexOf("Box") >= 0) {
-                }
-                obj.transform.position = posList[i];
-                obj.transform.rotation = rotList[i];
-                obj.transform.localScale = scaleList[i];
-                obj.transform.parent = this.mapped.transform;
-                obj.GetComponent<Renderer>().enabled = is_shown_map;
-            }
+    private Dictionary<string,GameObject> GetMappingObjects() {
+        Dictionary<string, GameObject> mappingObjs = new Dictionary<string, GameObject>();
+        foreach(Transform t in this.mapped.transform) {
+            mappingObjs[t.name] = t.gameObject;
         }
-        else
-        {
-            //セーブデータがない場合，何もしない
-        }
-        */
+        return mappingObjs;
     }
 
     /*
@@ -141,9 +148,27 @@ public class RoomMapper : MonoBehaviour
      * 選択中オブジェクトを切り替える
      */
     public void SwitchSelectingObj() {
+        this.MapSelectingObjects();
         this.selectingIndex = (this.selectingIndex + 1) % this.mapped.transform.childCount;
-        Transform selectedTransform = this.mapped.transform.GetChild(this.selectingIndex);
+        this.SelectMappedObject(selectingIndex);
+    }
+
+    public void SelectMappedObject(int mappedObjsIndex)
+    {
+        Transform selectedTransform = this.mapped.transform.GetChild(mappedObjsIndex);
         selectedTransform.parent = this.selecting.transform;
+
+        //Switch Pinch Setting
+        LeapRTS[] leaps = this.selecting.GetComponents<LeapRTS>();
+        if (selectedTransform.name.IndexOf(RoomMapper.CUBE_PREFIX) >= 0)
+        {
+            leaps[0].enabled = false;
+            leaps[1].enabled = true;
+        }
+        else {
+            leaps[0].enabled = true;
+            leaps[1].enabled = false;
+        }
     }
 
 
@@ -152,25 +177,51 @@ public class RoomMapper : MonoBehaviour
      */
     public void Save()
     {
-        /*
         this.MapSelectingObjects(); //選択したオブジェクトをマッピングする
-        List<string> savingObjTypeList = new List<string>() { };
-        List<Vector3> savingPosList = new List<Vector3>() { };
-        List<Quaternion> savingRotList = new List<Quaternion>() { };
-        List<Vector3> savingScaleList = new List<Vector3>() { };
 
-        foreach(Transform transform in this.mapped.transform) {
-            savingObjTypeList.Add(transform.gameObject.name);
-            savingPosList.Add(transform.position);
-            savingRotList.Add(transform.rotation);
-            savingScaleList.Add(transform.localScale);
+        this.pack = new MappedObjectsPack();
+        foreach (Transform transform in this.mapped.transform) {
+            this.pack.objNames.Add(transform.gameObject.name);
+            this.pack.objPositions.Add(transform.position);
+            this.pack.objRotations.Add(transform.rotation);
+            this.pack.objScales.Add(transform.localScale);
         }
-        PlayerPrefsX.SetStringArray("roomMappedObjectTypeList", savingObjTypeList.ToArray());
-        PlayerPrefsX.SetVector3Array("roomMappedPosList", savingPosList.ToArray());
-        PlayerPrefsX.SetQuaternionArray("roomMappedRotList", savingRotList.ToArray());
-        PlayerPrefsX.SetVector3Array("roomMappedScaleList", savingScaleList.ToArray());
-        */
+        string savingData = this.pack.ToJSON();
+        string packPath = this.MAPPED_OBJECTS_PACK_PATH + this.mappedJsonName;
+        File.WriteAllText(packPath, savingData);
+        Debug.Log("Data is saved in " + packPath);
     }
+
+    /*
+     * セーブデータを読み込む
+     */
+    public void Load()
+    {
+        bool is_shown_map = (SceneManager.GetActiveScene().name == RoomMapper.SCENE_NAME);
+
+        string packPath = this.MAPPED_OBJECTS_PACK_PATH + this.mappedJsonName;
+        string allText = File.ReadAllText(packPath);
+        this.pack = MappedObjectsPack.CreateFromJSON(allText);
+
+        Dictionary<string, GameObject> mappingObjs = this.GetMappingObjects();
+        for (int i = 0; i < this.pack.objPositions.Count; i++)
+        {
+            string name = this.pack.objNames[i];
+            if (mappingObjs.ContainsKey(name))
+            {
+                GameObject anObj = mappingObjs[name];
+                anObj.transform.position = this.pack.objPositions[i];
+                anObj.transform.rotation = this.pack.objRotations[i];
+                anObj.transform.localScale = this.pack.objScales[i];
+                anObj.transform.parent = this.mapped.transform;
+            }
+            else {
+                Debug.Log("Error: object " + name + " doesn't exist.");
+                continue;
+            }
+        }
+    }
+
 
     void OnApplicationQuit()
     {

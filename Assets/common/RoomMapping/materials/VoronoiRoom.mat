@@ -81,7 +81,7 @@ Material:
     - Vector1_65B5FC00: 0.49
     - Vector1_68995C68: 0.245
     - Vector1_6C139B43: 0.62
-    - Vector1_8DBDD071: 36.7
+    - Vector1_8DBDD071: 38.2
     - Vector1_9AEDC963: 3
     - Vector1_EFE64959: 30
     - Vector1_F3591533: 0
@@ -98,7 +98,7 @@ Material:
     - _Cull: 2
     - _CullMode: 2
     - _Cutoff: 0.5
-    - _Distance: 124.5
+    - _Distance: 29.32
     - _DistortionBlendMode: 0
     - _DistortionBlurBlendMode: 0
     - _DistortionBlurDstBlend: 1

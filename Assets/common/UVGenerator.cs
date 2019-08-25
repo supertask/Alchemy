@@ -17,11 +17,11 @@ public class UVGenerator : MonoBehaviour
 
     public void SimpleSmartUVMapping()
     {
-        Mesh mesh = this.GetComponent<MeshFilter>().mesh;
+        Mesh mesh = this.GetComponent<MeshFilter>().sharedMesh;
         Vector2[] uv = new Vector2[mesh.vertices.Length];
         float scale = 0.2f;
-        Debug.Log("uv: " + mesh.vertices.Length);
-        Debug.Log("normal: " + mesh.normals.Length);
+        //Debug.Log("uv: " + mesh.vertices.Length);
+        //Debug.Log("normal: " + mesh.normals.Length);
         Vector3[] axis_vecs = new Vector3[] { Vector3.left, Vector3.right, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
         AXIS[] axises = new AXIS[] { AXIS.X, AXIS.X, AXIS.Y, AXIS.Y, AXIS.Z, AXIS.Z };
 
@@ -56,6 +56,6 @@ public class UVGenerator : MonoBehaviour
                 uv[mi] = new Vector2(v.x, v.y) * scale;
             }
         }
-        this.GetComponent<MeshFilter>().mesh.uv = uv;
+        this.GetComponent<MeshFilter>().sharedMesh.uv = uv;
     }
 }

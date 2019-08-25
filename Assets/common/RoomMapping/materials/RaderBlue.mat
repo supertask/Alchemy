@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Rader
+  m_Name: RaderBlue
   m_Shader: {fileID: -6465566751694194690, guid: 8c8c98c972902ea48841e46395fdb148,
     type: 3}
   m_ShaderKeywords: 
